@@ -3,7 +3,8 @@ import { Component, inject } from '@angular/core';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { ProductDetailComponent } from '../product-detail/product-detail.component';
 import { ProductService } from '../product.service';
-import { catchError, EMPTY, tap } from 'rxjs';
+import { catchError, EMPTY } from 'rxjs';
+import { Product } from '../product';
 
 @Component({
   selector: 'pm-product-list',
@@ -25,9 +26,10 @@ export class ProductListComponent {
     })
   );
 
-  selectedProductId: number = 0;
+  products: Product[] = [];
+  readonly selectedProductId$ = this.productService.productSelected$;
 
   onSelected(productId: number): void {
-    this.selectedProductId = productId;
+    this.productService.productSelected(productId);
   }
 }
