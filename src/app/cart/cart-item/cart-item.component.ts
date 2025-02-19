@@ -20,9 +20,9 @@ export class CartItemComponent {
 
   private cartService = inject(CartService);
 
-  // Quantity available (hard-coded to 8)
-  // Mapped to an array from 1-8
-  qtyArr = [...Array(8).keys()].map((x) => x + 1);
+  qtyArr = computed<Number[]>(() =>
+    [...Array(this.item().product.quantityInStock).keys()].map((x) => x + 1)
+  );
 
   // Calculate the extended price
   exPrice = computed(() => this.item()?.quantity * this.item()?.product.price);

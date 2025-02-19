@@ -36,13 +36,17 @@ export class CartService {
   );
 
   addToCart(product: Product): void {
-    const cartItem: CartItem = {
-      product,
-      quantity: 1,
-    };
-
     // We need to copy an array since adding and removing wouldn't send a signal notification
-    this.cartItems.update((items) => [...items, cartItem]);
+    this.cartItems.update((items) => {
+      const itemFound = items.find((i) => i.product.id === product.id);
+      if (itemFound) {
+        itemFound.quantity++;
+        
+        return [...items];
+      } else {
+        return [...items, { product, quantity: 1 }];
+      }
+    });
   }
 
   removeFromCart(cartItem: CartItem): void {
