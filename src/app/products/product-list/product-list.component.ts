@@ -3,8 +3,6 @@ import { Component, inject } from '@angular/core';
 import { NgIf, NgFor, NgClass, AsyncPipe } from '@angular/common';
 import { ProductDetailComponent } from '../product-detail/product-detail.component';
 import { ProductService } from '../product.service';
-import { catchError, EMPTY } from 'rxjs';
-import { Product } from '../product';
 
 @Component({
   selector: 'pm-product-list',
@@ -14,19 +12,12 @@ import { Product } from '../product';
 })
 export class ProductListComponent {
   pageTitle = 'Products';
-  errorMessage = '';
 
   private productService = inject(ProductService);
 
-  readonly products$ = this.productService.products$.pipe(
-    catchError((err) => {
-      this.errorMessage = err;
+  products = this.productService.products;
+  errorMessage = this.productService.productsError;
 
-      return EMPTY;
-    })
-  );
-
-  products: Product[] = [];
   readonly selectedProductId$ = this.productService.productSelected$;
 
   onSelected(productId: number): void {
