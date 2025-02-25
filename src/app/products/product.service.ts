@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   BehaviorSubject,
   catchError,
@@ -17,7 +17,7 @@ import { Product } from './product';
 import { HttpErrorService } from '../utilities/http-error.service';
 import { ReviewService } from '../reviews/review.service';
 import { Review } from '../reviews/review';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Result } from '../utilities/result';
 
 @Injectable({
@@ -30,10 +30,7 @@ export class ProductService {
   private errorService = inject(HttpErrorService);
   private reviewService = inject(ReviewService);
 
-  private productSelectedSubject = new BehaviorSubject<number | undefined>(
-    undefined
-  );
-  readonly productSelected$ = this.productSelectedSubject.asObservable();
+  selectedProductId = signal<number | undefined>(undefined);
 
   private productsResult$ = this.http.get<Product[]>(this.productsUrl).pipe(
     map((p) => ({ data: p } as Result<Product[]>)),
@@ -53,7 +50,7 @@ export class ProductService {
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
 
-  readonly product$ = this.productSelected$.pipe(
+  readonly product$ = toObservable(this.selectedProductId).pipe(
     filter(Boolean),
     switchMap((id) => {
       const productUrl = this.productsUrl + '/' + id;
@@ -78,7 +75,7 @@ export class ProductService {
   // );
 
   productSelected(productID: number): void {
-    this.productSelectedSubject.next(productID);
+    this.selectedProductId.set(productID);
   }
 
   private getProductWithReviews(product: Product): Observable<Product> {
