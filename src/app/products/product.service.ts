@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { computed, inject, Injectable } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   BehaviorSubject,
   catchError,
@@ -17,7 +17,7 @@ import { Product } from './product';
 import { HttpErrorService } from '../utilities/http-error.service';
 import { ReviewService } from '../reviews/review.service';
 import { Review } from '../reviews/review';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Result } from '../utilities/result';
 
 @Injectable({
@@ -30,10 +30,7 @@ export class ProductService {
   private errorService = inject(HttpErrorService);
   private reviewService = inject(ReviewService);
 
-  private productSelectedSubject = new BehaviorSubject<number | undefined>(
-    undefined
-  );
-  readonly productSelected$ = this.productSelectedSubject.asObservable();
+  selectedProductId = signal<number | undefined>(undefined);
 
   private productsResult$ = this.http.get<Product[]>(this.productsUrl).pipe(
     map((p) => ({ data: p } as Result<Product[]>)),
@@ -53,17 +50,27 @@ export class ProductService {
   products = computed(() => this.productsResult().data);
   productsError = computed(() => this.productsResult().error);
 
-  readonly product$ = this.productSelected$.pipe(
+  private productResult$ = toObservable(this.selectedProductId).pipe(
     filter(Boolean),
     switchMap((id) => {
       const productUrl = this.productsUrl + '/' + id;
 
       return this.http.get<Product>(productUrl).pipe(
         switchMap((product) => this.getProductWithReviews(product)),
-        catchError((err) => this.handleError(err))
+        catchError((err) =>
+          of({
+            data: undefined,
+            error: this.errorService.formatError(err),
+          } as Result<Product>)
+        )
       );
-    })
+    }),
+    map((p) => ({ data: p } as Result<Product>))
   );
+
+  private productResult = toSignal(this.productResult$);
+  product = computed(() => this.productResult()?.data);
+  productError = computed(() => this.productResult()?.error);
 
   // readonly product$ = combineLatest([
   //   this.productSelected$,
@@ -78,7 +85,7 @@ export class ProductService {
   // );
 
   productSelected(productID: number): void {
-    this.productSelectedSubject.next(productID);
+    this.selectedProductId.set(productID);
   }
 
   private getProductWithReviews(product: Product): Observable<Product> {
